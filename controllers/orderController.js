@@ -2,23 +2,25 @@ const Orders = require('../models/orderModel')
 const orderService = require('../services/orderService')
 
 const addOrder = async(req, res) => {
-    const products = req.body.products
-    if(!Array.isArray(products)){
+    const cartItems = req.body.cartItems
+
+    if(!Array.isArray(cartItems)){
         return res.status(400).json({message: "products must be array"})
-    }
-    if( products.some(product => !product.id || !product.quantity) ) {
-        return res.status(400).json({message: "wrong order-product format"})
     }
 
     try {
         const order = await orderService.createOrder({
             user_id: req.user.id,
-            products: products
+            cart: cartItems
         })
         return res.status(201).json(order)
     } catch(err){
         console.log(err.stack)
-        return res.status(500).json({message: err.message})
+        return res.status(
+            err.status || 500
+        ).json({
+            message: err.message || "something went wrong"
+        })
     }
 }
 

@@ -2,6 +2,7 @@ const userService = require('../services/userService')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const secret_key = process.env.secret_key
+const cookieParser = require('cookie-parser')
 
 const userRegister = async(req, res) => {
     const {username, email, password, name, surname, bio} = req.body
@@ -57,7 +58,9 @@ const userLogin = async(req, res) => {
 
     const token = jwt.sign({user: finded}, secret_key, {expiresIn: '1h'})
 
-    return res.status(200).json({
+    return res
+        .status(200)
+        .json({
             id: finded.id,
             username: finded.username,
             email: finded.email,

@@ -1,20 +1,29 @@
 const sequelize = require('../configs/sequielize')
+const {Op} = require('sequelize')
 const Orders = require('../models/orderModel')
 const OrderItem = require('../models/orderItemModel')
 const Products = require('../models/productModel')
+const Cart = require('../models/cartModel')
 
 const createOrder = async(order) => {
-    let products = await Products.findAll()
-    products = products.map(product => product.dataValues)
-
-    let sum = 0 
-    for(let i = 0; i < order.products.length; ++i){
-        for(let j = 0; j < products.length; ++j){
-            if(order.products[i].id === products[j].id){
-                sum += order.products[i].quantity * products[j].price
+    let cart = await Cart.findAll({
+        where: {
+            id: {
+                [Op.in]: order.cart
             }
         }
+    })
+    if(cart.length < order.cart.length){
+        throw {status: 400, message: "invalid cartItem id"}
     }
+    cart = cart.map(c => c.dataValues)
+
+    let sum = 0
+
+    for(let i = 0; i < cart.length; i++){
+        sum += cart[i].total_price
+    }
+
     let newOrder
     const t = await sequelize.transaction()
 
@@ -26,15 +35,12 @@ const createOrder = async(order) => {
 
         newOrder = newOrder.dataValues
 
-        for(let i = 0; i < order.products.length; ++i){
-            const product = products.find(p => p.id === order.products[i].id);
-            if(!product) throw new Error('no product with that id')
-            
+        for(let i = 0; i < order.cart.length; ++i){
             await OrderItem.create({
                 order_id: newOrder.id,
-                product_id: order.products[i].id,
-                quantity: order.products[i].quantity,
-                total_price: product.price * order.products[i].quantity
+                product_id: cart[i].product_id,
+                quantity: cart[i].quantity,
+                total_price: cart[i].total_price
             }, {transaction: t})
         }
 
